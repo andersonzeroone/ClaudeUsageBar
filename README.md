@@ -76,7 +76,7 @@ Claude Code CLI's own credential state.
 ## Build & run
 
 ```bash
-git clone https://github.com/<your-username>/ClaudeUsageBar.git
+git clone https://github.com/andersonzeroone/ClaudeUsageBar.git
 cd ClaudeUsageBar
 ./build.sh          # swiftc -O -> ./claude-usagebar
 ./claude-usagebar &  # appears in the menu bar, no Dock icon
