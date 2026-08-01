@@ -53,7 +53,14 @@ enum UsageFormatter {
     }
 
     static func textBar(_ pct: Int, width: Int = 12) -> String {
-        let filled = max(0, min(width, Int((Double(pct) / 100.0 * Double(width)).rounded())))
-        return String(repeating: "█", count: filled) + String(repeating: "░", count: width - filled)
+        let (filled, empty) = textBarComponents(pct, width: width)
+        return filled + empty
+    }
+
+    /// Filled vs. empty glyph runs, split out so callers (the menu builder)
+    /// can color each run separately instead of one flat string.
+    static func textBarComponents(_ pct: Int, width: Int = 12) -> (filled: String, empty: String) {
+        let filledCount = max(0, min(width, Int((Double(pct) / 100.0 * Double(width)).rounded())))
+        return (String(repeating: "█", count: filledCount), String(repeating: "░", count: width - filledCount))
     }
 }

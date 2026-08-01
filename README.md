@@ -9,7 +9,9 @@ No Electron, no background daemon, no third-party dependencies. A small
 Swift Package (`swift build`), running as a plain `NSStatusItem`.
 
 <p align="center">
-  <em>🟢 gauge icon in the menu bar → click → account, plan, and usage bars</em>
+  <img src="docs/screenshot.svg" width="680" alt="Menu bar gauge icon and dropdown showing account, plan, and 5h/weekly usage bars">
+  <br>
+  <sub>Illustrative mockup with sample data — not a live screenshot.</sub>
 </p>
 
 ## Why

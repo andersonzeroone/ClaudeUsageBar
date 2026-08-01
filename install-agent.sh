@@ -24,8 +24,15 @@ if [ ! -x "$SRC_BIN" ]; then
 fi
 
 mkdir -p "$INSTALL_DIR"
-cp -f "$SRC_BIN" "$INSTALLED_BIN"
-chmod +x "$INSTALLED_BIN"
+# Copy to a temp file and rename over the target instead of overwriting it
+# in place. On Apple Silicon, rewriting an ad-hoc-signed binary that has
+# already run at that exact path can leave the kernel's code-signing cache
+# stale for that inode ("load code signature error 2"), killing the process
+# moments after launch. A rename swaps in a fresh inode and sidesteps that.
+TMP_BIN="${INSTALLED_BIN}.new"
+cp -f "$SRC_BIN" "$TMP_BIN"
+chmod +x "$TMP_BIN"
+mv -f "$TMP_BIN" "$INSTALLED_BIN"
 
 mkdir -p "$HOME/Library/LaunchAgents"
 cat > "$PLIST" <<EOF

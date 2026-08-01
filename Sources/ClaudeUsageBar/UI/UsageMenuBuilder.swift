@@ -14,6 +14,9 @@ struct MenuContent {
 /// Builds the `NSMenu` shown when the status item is clicked. Pure
 /// presentation: it never touches the network or the Keychain itself.
 enum UsageMenuBuilder {
+    private static let rowWidth: CGFloat = 280
+    private static let rowIndent: CGFloat = 14
+
     static func build(
         _ content: MenuContent,
         target: AnyObject,
@@ -23,47 +26,90 @@ enum UsageMenuBuilder {
     ) -> NSMenu {
         let menu = NSMenu()
 
-        func addDisabled(_ title: String, bold: Bool = false) {
-            let item = NSMenuItem(title: title, action: nil, keyEquivalent: "")
+        /// Renders as a plain, custom `NSView` row instead of a disabled
+        /// `NSMenuItem` title. A disabled item's text gets dimmed by AppKit
+        /// itself regardless of any color set on it — the only reliable way
+        /// to get an exact color (for the secondary/tertiary hierarchy, or
+        /// the severity-colored progress bar) is to draw it ourselves.
+        func addLabel(_ attributed: NSAttributedString, height: CGFloat = 20) {
+            let label = NSTextField(labelWithAttributedString: attributed)
+            label.lineBreakMode = .byTruncatingTail
+            label.maximumNumberOfLines = 1
+            label.frame = NSRect(x: rowIndent, y: (height - 16) / 2, width: rowWidth - rowIndent * 2, height: 16)
+            let container = NSView(frame: NSRect(x: 0, y: 0, width: rowWidth, height: height))
+            container.addSubview(label)
+            let item = NSMenuItem(title: "", action: nil, keyEquivalent: "")
             item.isEnabled = false
-            if bold {
-                item.attributedTitle = NSAttributedString(
-                    string: title,
-                    attributes: [.font: NSFont.boldSystemFont(ofSize: NSFont.systemFontSize)]
-                )
-            }
+            item.view = container
             menu.addItem(item)
         }
 
-        if let account = content.account {
-            addDisabled(account.displayName ?? L10n.accountFallbackName, bold: true)
-            if let email = account.emailAddress { addDisabled(email) }
-            if let org = account.organizationName { addDisabled(L10n.org(org)) }
-        } else {
-            addDisabled(L10n.accountUnknownTitle, bold: true)
-            addDisabled(L10n.accountUnknownDetail)
+        func addPrimary(_ text: String, bold: Bool = false) {
+            addLabel(NSAttributedString(string: text, attributes: [
+                .font: bold ? NSFont.boldSystemFont(ofSize: 13) : NSFont.systemFont(ofSize: 13),
+                .foregroundColor: NSColor.labelColor,
+            ]))
         }
-        addDisabled(L10n.plan(content.credentials?.planLabel ?? L10n.planUnknown))
+
+        func addSecondary(_ text: String) {
+            addLabel(NSAttributedString(string: text, attributes: [
+                .font: NSFont.systemFont(ofSize: 12),
+                .foregroundColor: NSColor.secondaryLabelColor,
+            ]))
+        }
+
+        /// A usage row with a two-tone, severity-colored progress bar.
+        func addUsageLine(label: String, pct: Int) {
+            let (filled, empty) = UsageFormatter.textBarComponents(pct)
+            let barFont = NSFont.monospacedSystemFont(ofSize: 12, weight: .medium)
+            let line = NSMutableAttributedString(string: "\(label)  ", attributes: [
+                .font: NSFont.systemFont(ofSize: 13),
+                .foregroundColor: NSColor.labelColor,
+            ])
+            line.append(NSAttributedString(string: filled, attributes: [
+                .font: barFont,
+                .foregroundColor: UsageSeverity.color(for: pct),
+            ]))
+            line.append(NSAttributedString(string: empty, attributes: [
+                .font: barFont,
+                .foregroundColor: NSColor.tertiaryLabelColor,
+            ]))
+            line.append(NSAttributedString(string: "  \(pct)%", attributes: [
+                .font: NSFont.systemFont(ofSize: 13, weight: .semibold),
+                .foregroundColor: NSColor.labelColor,
+            ]))
+            addLabel(line, height: 22)
+        }
+
+        if let account = content.account {
+            addPrimary(account.displayName ?? L10n.accountFallbackName, bold: true)
+            if let email = account.emailAddress { addSecondary(email) }
+            if let org = account.organizationName { addSecondary(L10n.org(org)) }
+        } else {
+            addPrimary(L10n.accountUnknownTitle, bold: true)
+            addSecondary(L10n.accountUnknownDetail)
+        }
+        addSecondary(L10n.plan(content.credentials?.planLabel ?? L10n.planUnknown))
         menu.addItem(.separator())
 
         if content.loading {
-            addDisabled(L10n.loadingUsage)
+            addSecondary(L10n.loadingUsage)
         } else if let error = content.error {
-            addDisabled("⚠️ \(error)")
+            addPrimary("⚠️ \(error)")
         } else if let usage = content.usage {
             let fivePct = UsageFormatter.percent(usage.fiveHour?.utilization)
             let sevenPct = UsageFormatter.percent(usage.sevenDay?.utilization)
-            addDisabled(L10n.sessionLine(bar: UsageFormatter.textBar(fivePct), pct: fivePct))
-            addDisabled(L10n.resetsLine(UsageFormatter.resetDescription(usage.fiveHour?.resetsAt)))
+            addUsageLine(label: L10n.sessionLabel, pct: fivePct)
+            addSecondary(L10n.resetsLine(UsageFormatter.resetDescription(usage.fiveHour?.resetsAt)))
             menu.addItem(.separator())
-            addDisabled(L10n.weeklyLine(bar: UsageFormatter.textBar(sevenPct), pct: sevenPct))
-            addDisabled(L10n.resetsLine(UsageFormatter.resetDescription(usage.sevenDay?.resetsAt)))
+            addUsageLine(label: L10n.weeklyLabel, pct: sevenPct)
+            addSecondary(L10n.resetsLine(UsageFormatter.resetDescription(usage.sevenDay?.resetsAt)))
         } else {
-            addDisabled(L10n.noUsageData)
+            addSecondary(L10n.noUsageData)
         }
 
         menu.addItem(.separator())
-        addDisabled(L10n.updatedAt(UsageFormatter.timestampFormat.string(from: Date())))
+        addSecondary(L10n.updatedAt(UsageFormatter.timestampFormat.string(from: Date())))
 
         let languageItem = NSMenuItem(title: L10n.languageMenuTitle, action: nil, keyEquivalent: "")
         let languageMenu = NSMenu()

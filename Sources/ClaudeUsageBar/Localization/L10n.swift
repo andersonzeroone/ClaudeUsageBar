@@ -19,12 +19,8 @@ enum L10n {
 
     static var loadingUsage: String { pick(pt: "Carregando uso…", en: "Loading usage…") }
     static var noUsageData: String { pick(pt: "Sem dados de uso.", en: "No usage data.") }
-    static func sessionLine(bar: String, pct: Int) -> String {
-        pick(pt: "Sessão (5h)  \(bar)  \(pct)%", en: "Session (5h)  \(bar)  \(pct)%")
-    }
-    static func weeklyLine(bar: String, pct: Int) -> String {
-        pick(pt: "Semana (7d)  \(bar)  \(pct)%", en: "Weekly (7d)  \(bar)  \(pct)%")
-    }
+    static var sessionLabel: String { pick(pt: "Sessão (5h)", en: "Session (5h)") }
+    static var weeklyLabel: String { pick(pt: "Semana (7d)", en: "Weekly (7d)") }
     static func resetsLine(_ description: String) -> String {
         pick(pt: "  reseta \(description)", en: "  resets \(description)")
     }
