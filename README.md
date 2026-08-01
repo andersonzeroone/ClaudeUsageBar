@@ -5,8 +5,8 @@ A tiny, native macOS menu bar app that shows who you're logged in as with
 window you've burned through — session (5h) and weekly — without opening a
 terminal or the Claude Console.
 
-No Electron, no background daemon, no dependencies. One Swift file,
-compiled with `swiftc`, running as a plain `NSStatusItem`.
+No Electron, no background daemon, no third-party dependencies. A small
+Swift Package (`swift build`), running as a plain `NSStatusItem`.
 
 <p align="center">
   <em>🟢 gauge icon in the menu bar → click → account, plan, and usage bars</em>
@@ -64,11 +64,43 @@ refresh token is available, it refreshes in memory just for that one request;
 the rotated token is *not* persisted, so it can never interfere with the
 Claude Code CLI's own credential state.
 
+## Project structure
+
+A standard Swift Package, no Xcode project file needed:
+
+```
+ClaudeUsageBar/
+├── Package.swift
+└── Sources/ClaudeUsageBar/
+    ├── App.swift                    # @main entry point (NSApplicationDelegate)
+    ├── Models/
+    │   ├── ClaudeAccount.swift      # ~/.claude.json → oauthAccount
+    │   ├── OAuthCredentials.swift   # Keychain credential shape + plan label
+    │   └── UsageResponse.swift      # /api/oauth/usage response shape
+    ├── Credentials/
+    │   ├── CredentialsStore.swift   # read-only Keychain + ~/.claude.json access
+    │   └── ClaudeCLI.swift          # shells out to `claude --version`
+    ├── Networking/
+    │   └── AnthropicUsageAPI.swift  # usage fetch + token refresh
+    ├── Formatting/
+    │   └── UsageFormatter.swift     # pure percent/date/text-bar formatting
+    └── UI/
+        ├── MenuBarIcon.swift        # SF Symbol gauge rendering
+        ├── UsageMenuBuilder.swift   # NSMenu construction (pure function of state)
+        └── StatusBarController.swift # NSStatusItem owner, timer, orchestration
+```
+
+Each layer has one job: `Models` only decode JSON, `Credentials`/`Networking`
+only do I/O, `Formatting` is pure functions, and `UI` is the only layer
+allowed to touch AppKit state. `StatusBarController` is the sole piece that
+mutates anything — everything else is a value type or a stateless `enum`
+namespace.
+
 ## Requirements
 
 - macOS 12+ (Monterey or later). The animated gauge needle requires macOS 13+;
   on older versions the icon is still shown, just static.
-- Xcode Command Line Tools, for `swiftc` (`xcode-select --install`).
+- Xcode Command Line Tools, for the Swift toolchain (`xcode-select --install`).
 - The [`claude`](https://claude.com/claude-code) CLI, run at least once so
   your OAuth credentials exist in the Keychain and `~/.claude.json` has your
   account info.
@@ -78,7 +110,7 @@ Claude Code CLI's own credential state.
 ```bash
 git clone https://github.com/andersonzeroone/ClaudeUsageBar.git
 cd ClaudeUsageBar
-./build.sh          # swiftc -O -> ./claude-usagebar
+./build.sh          # swift build -c release -> ./claude-usagebar
 ./claude-usagebar &  # appears in the menu bar, no Dock icon
 ```
 
@@ -128,8 +160,8 @@ refresh-token flow) is based on
 [akitaonrails/ai-usagebar](https://github.com/akitaonrails/ai-usagebar), a
 much more complete multi-vendor (Claude, OpenAI, Z.AI, OpenRouter, DeepSeek,
 Kimi, and more) usage bar for Waybar, GNOME Shell, and macOS. This project is
-a deliberately minimal, single-vendor, single-file reimplementation in native
-Swift with no external dependencies.
+a deliberately minimal, single-vendor reimplementation in native Swift with
+no external dependencies.
 
 ## License
 

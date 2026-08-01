@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
 cd "$(dirname "$0")"
-swiftc -O -parse-as-library -o claude-usagebar App.swift
+swift build -c release
+cp -f .build/release/ClaudeUsageBar ./claude-usagebar
 echo "Built ./claude-usagebar"

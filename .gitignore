@@ -1,3 +1,5 @@
 /claude-usagebar
+.build/
+.swiftpm/
 .DS_Store
 *.log
