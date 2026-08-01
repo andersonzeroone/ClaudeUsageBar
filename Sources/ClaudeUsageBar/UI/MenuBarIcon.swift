@@ -14,7 +14,7 @@ enum MenuBarIcon {
     }
 
     static func warning() -> NSImage? {
-        guard let base = NSImage(systemSymbolName: "exclamationmark.triangle.fill", accessibilityDescription: "Aviso") else { return nil }
+        guard let base = NSImage(systemSymbolName: "exclamationmark.triangle.fill", accessibilityDescription: L10n.iconAccessibilityWarning) else { return nil }
         let config = NSImage.SymbolConfiguration(pointSize: NSFont.systemFontSize, weight: .medium)
         let image = base.withSymbolConfiguration(config) ?? base
         image.isTemplate = true
@@ -25,9 +25,9 @@ enum MenuBarIcon {
         let clamped = max(0.0, min(1.0, fraction))
         let base: NSImage?
         if #available(macOS 13.0, *) {
-            base = NSImage(systemSymbolName: "gauge.with.needle", variableValue: clamped, accessibilityDescription: "Uso Claude")
+            base = NSImage(systemSymbolName: "gauge.with.needle", variableValue: clamped, accessibilityDescription: L10n.iconAccessibilityUsage)
         } else {
-            base = NSImage(systemSymbolName: "gauge.with.needle", accessibilityDescription: "Uso Claude")
+            base = NSImage(systemSymbolName: "gauge.with.needle", accessibilityDescription: L10n.iconAccessibilityUsage)
         }
         guard let base else { return nil }
         var config = NSImage.SymbolConfiguration(pointSize: NSFont.systemFontSize, weight: .medium)

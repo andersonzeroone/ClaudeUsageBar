@@ -10,18 +10,18 @@ final class StatusBarController: NSObject {
     private var userAgent = AnthropicUsageAPI.fallbackUserAgent
     private var isRefreshing = false
 
+    /// Last rendered state, kept around so switching languages can redraw
+    /// the menu instantly without a network round trip.
+    private var currentIcon: NSImage?
+    private var currentTitle = " …"
+    private var currentContent = MenuContent(loading: true)
+
     override init() {
         super.init()
         statusItem.button?.font = NSFont.monospacedDigitSystemFont(ofSize: NSFont.smallSystemFontSize, weight: .regular)
         statusItem.button?.imagePosition = .imageLeading
-        statusItem.button?.image = MenuBarIcon.loading()
-        statusItem.button?.title = " …"
-        statusItem.menu = UsageMenuBuilder.build(
-            MenuContent(loading: true),
-            target: self,
-            refreshAction: #selector(refreshNow),
-            quitAction: #selector(quit)
-        )
+        currentIcon = MenuBarIcon.loading()
+        applyRender()
 
         Task {
             userAgent = ClaudeCLI.usageEndpointUserAgent(fallback: AnthropicUsageAPI.fallbackUserAgent)
@@ -40,6 +40,12 @@ final class StatusBarController: NSObject {
         NSApp.terminate(nil)
     }
 
+    @objc private func selectLanguage(_ sender: NSMenuItem) {
+        guard let language = sender.representedObject as? AppLanguage, language != AppLanguage.current else { return }
+        AppLanguage.current = language
+        applyRender()
+    }
+
     private func refresh() async {
         guard !isRefreshing else { return }
         isRefreshing = true
@@ -51,10 +57,7 @@ final class StatusBarController: NSObject {
             render(
                 icon: MenuBarIcon.warning(),
                 title: " —",
-                content: MenuContent(
-                    account: account,
-                    error: "Não foi possível ler as credenciais no Keychain. Rode `claude` no Terminal para entrar."
-                )
+                content: MenuContent(account: account, error: L10n.errorNoKeychain)
             )
             return
         }
@@ -71,21 +74,13 @@ final class StatusBarController: NSObject {
             render(
                 icon: MenuBarIcon.warning(),
                 title: " —",
-                content: MenuContent(
-                    account: account,
-                    credentials: credentials,
-                    error: "Sessão expirada. Rode `claude` no Terminal para reautenticar."
-                )
+                content: MenuContent(account: account, credentials: credentials, error: L10n.errorSessionExpired)
             )
         case .failure:
             render(
                 icon: MenuBarIcon.warning(),
                 title: " —",
-                content: MenuContent(
-                    account: account,
-                    credentials: credentials,
-                    error: "Falha ao consultar o uso (rede ou API indisponível). Tentando novamente em breve."
-                )
+                content: MenuContent(account: account, credentials: credentials, error: L10n.errorFetchFailed)
             )
         }
     }
@@ -103,13 +98,23 @@ final class StatusBarController: NSObject {
     }
 
     private func render(icon: NSImage?, title: String, content: MenuContent) {
-        statusItem.button?.image = icon
-        statusItem.button?.title = title
+        currentIcon = icon
+        currentTitle = title
+        currentContent = content
+        applyRender()
+    }
+
+    /// Redraws the status item and menu from the cached state — used both
+    /// after a fresh fetch and after a plain language switch.
+    private func applyRender() {
+        statusItem.button?.image = currentIcon
+        statusItem.button?.title = currentTitle
         statusItem.menu = UsageMenuBuilder.build(
-            content,
+            currentContent,
             target: self,
             refreshAction: #selector(refreshNow),
-            quitAction: #selector(quit)
+            quitAction: #selector(quit),
+            languageAction: #selector(selectLanguage(_:))
         )
     }
 }

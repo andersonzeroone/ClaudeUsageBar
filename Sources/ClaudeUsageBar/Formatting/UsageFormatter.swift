@@ -35,21 +35,21 @@ enum UsageFormatter {
     }
 
     static func resetDescription(_ isoString: String?) -> String {
-        guard let date = parseDate(isoString) else { return "—" }
+        guard let date = parseDate(isoString) else { return L10n.resetUnknown }
         let now = Date()
-        if date <= now { return "agora" }
+        if date <= now { return L10n.resetNow }
         let interval = date.timeIntervalSince(now)
         let hours = Int(interval) / 3600
         let minutes = (Int(interval) % 3600) / 60
         let relative: String
         if hours >= 24 {
-            relative = "em \(hours / 24)d"
+            relative = L10n.resetInDays(hours / 24)
         } else if hours > 0 {
-            relative = "em \(hours)h\(minutes)m"
+            relative = L10n.resetInHoursMinutes(hours, minutes)
         } else {
-            relative = "em \(minutes)m"
+            relative = L10n.resetInMinutes(minutes)
         }
-        return "\(relative) (às \(clockFormat.string(from: date)))"
+        return L10n.resetAt(relative: relative, clock: clockFormat.string(from: date))
     }
 
     static func textBar(_ pct: Int, width: Int = 12) -> String {

@@ -32,6 +32,8 @@ icon that updates on its own.
   `NSApplication.ActivationPolicy.accessory`).
 - **Optional autostart at login** via a per-user `LaunchAgent` — no `sudo`,
   fully reversible.
+- **English / Português (BR) toggle**, from the dropdown's *Language* submenu
+  — independent of the macOS system language, persisted across restarts.
 
 ## How it works
 
@@ -84,6 +86,9 @@ ClaudeUsageBar/
     │   └── AnthropicUsageAPI.swift  # usage fetch + token refresh
     ├── Formatting/
     │   └── UsageFormatter.swift     # pure percent/date/text-bar formatting
+    ├── Localization/
+    │   ├── AppLanguage.swift        # EN / PT-BR toggle, persisted in UserDefaults
+    │   └── L10n.swift               # every user-facing string, in one place
     └── UI/
         ├── MenuBarIcon.swift        # SF Symbol gauge rendering
         ├── UsageMenuBuilder.swift   # NSMenu construction (pure function of state)
@@ -91,10 +96,10 @@ ClaudeUsageBar/
 ```
 
 Each layer has one job: `Models` only decode JSON, `Credentials`/`Networking`
-only do I/O, `Formatting` is pure functions, and `UI` is the only layer
-allowed to touch AppKit state. `StatusBarController` is the sole piece that
-mutates anything — everything else is a value type or a stateless `enum`
-namespace.
+only do I/O, `Formatting` is pure functions, `Localization` is a dictionary
+lookup, and `UI` is the only layer allowed to touch AppKit state.
+`StatusBarController` is the sole piece that mutates anything — everything
+else is a value type or a stateless `enum` namespace.
 
 ## Requirements
 

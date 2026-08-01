@@ -16,7 +16,7 @@ struct OAuthCredentials: Decodable {
 
     /// Human-readable plan label, e.g. "Pro", "Max 5x", "Max 20x".
     var planLabel: String {
-        guard let sub = subscriptionType, !sub.isEmpty else { return "Desconhecido" }
+        guard let sub = subscriptionType, !sub.isEmpty else { return L10n.planUnknown }
         var label = sub.prefix(1).uppercased() + sub.dropFirst()
         if let tier = rateLimitTier {
             if tier.contains("20x") { label += " 20x" }

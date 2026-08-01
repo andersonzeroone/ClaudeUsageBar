@@ -18,7 +18,8 @@ enum UsageMenuBuilder {
         _ content: MenuContent,
         target: AnyObject,
         refreshAction: Selector,
-        quitAction: Selector
+        quitAction: Selector,
+        languageAction: Selector
     ) -> NSMenu {
         let menu = NSMenu()
 
@@ -35,41 +36,53 @@ enum UsageMenuBuilder {
         }
 
         if let account = content.account {
-            addDisabled(account.displayName ?? "Conta Claude", bold: true)
+            addDisabled(account.displayName ?? L10n.accountFallbackName, bold: true)
             if let email = account.emailAddress { addDisabled(email) }
-            if let org = account.organizationName { addDisabled("Org: \(org)") }
+            if let org = account.organizationName { addDisabled(L10n.org(org)) }
         } else {
-            addDisabled("Conta não identificada", bold: true)
-            addDisabled("(sem ~/.claude.json legível)")
+            addDisabled(L10n.accountUnknownTitle, bold: true)
+            addDisabled(L10n.accountUnknownDetail)
         }
-        addDisabled("Plano: \(content.credentials?.planLabel ?? "Desconhecido")")
+        addDisabled(L10n.plan(content.credentials?.planLabel ?? L10n.planUnknown))
         menu.addItem(.separator())
 
         if content.loading {
-            addDisabled("Carregando uso…")
+            addDisabled(L10n.loadingUsage)
         } else if let error = content.error {
             addDisabled("⚠️ \(error)")
         } else if let usage = content.usage {
             let fivePct = UsageFormatter.percent(usage.fiveHour?.utilization)
             let sevenPct = UsageFormatter.percent(usage.sevenDay?.utilization)
-            addDisabled("Sessão (5h)  \(UsageFormatter.textBar(fivePct))  \(fivePct)%")
-            addDisabled("  reseta \(UsageFormatter.resetDescription(usage.fiveHour?.resetsAt))")
+            addDisabled(L10n.sessionLine(bar: UsageFormatter.textBar(fivePct), pct: fivePct))
+            addDisabled(L10n.resetsLine(UsageFormatter.resetDescription(usage.fiveHour?.resetsAt)))
             menu.addItem(.separator())
-            addDisabled("Semana (7d)  \(UsageFormatter.textBar(sevenPct))  \(sevenPct)%")
-            addDisabled("  reseta \(UsageFormatter.resetDescription(usage.sevenDay?.resetsAt))")
+            addDisabled(L10n.weeklyLine(bar: UsageFormatter.textBar(sevenPct), pct: sevenPct))
+            addDisabled(L10n.resetsLine(UsageFormatter.resetDescription(usage.sevenDay?.resetsAt)))
         } else {
-            addDisabled("Sem dados de uso.")
+            addDisabled(L10n.noUsageData)
         }
 
         menu.addItem(.separator())
-        addDisabled("Atualizado às \(UsageFormatter.timestampFormat.string(from: Date()))")
+        addDisabled(L10n.updatedAt(UsageFormatter.timestampFormat.string(from: Date())))
 
-        let refreshItem = NSMenuItem(title: "Atualizar agora", action: refreshAction, keyEquivalent: "r")
+        let languageItem = NSMenuItem(title: L10n.languageMenuTitle, action: nil, keyEquivalent: "")
+        let languageMenu = NSMenu()
+        for language in AppLanguage.allCases {
+            let item = NSMenuItem(title: language.displayName, action: languageAction, keyEquivalent: "")
+            item.target = target
+            item.representedObject = language
+            item.state = (language == AppLanguage.current) ? .on : .off
+            languageMenu.addItem(item)
+        }
+        languageItem.submenu = languageMenu
+        menu.addItem(languageItem)
+
+        let refreshItem = NSMenuItem(title: L10n.refreshNow, action: refreshAction, keyEquivalent: "r")
         refreshItem.target = target
         menu.addItem(refreshItem)
 
         menu.addItem(.separator())
-        let quitItem = NSMenuItem(title: "Sair", action: quitAction, keyEquivalent: "q")
+        let quitItem = NSMenuItem(title: L10n.quit, action: quitAction, keyEquivalent: "q")
         quitItem.target = target
         menu.addItem(quitItem)
 
