@@ -132,8 +132,16 @@ once.
 ./uninstall-agent.sh # removes it
 ```
 
-This only touches `~/Library/LaunchAgents` — no `sudo`, no system-wide
-changes, fully reversible.
+`install-agent.sh` copies the built binary to
+`~/Library/Application Support/ClaudeUsageBar/` and points the LaunchAgent
+there — **not** at this repo checkout. That means you can delete this
+cloned/built folder afterwards and the menu bar app keeps running and
+restarting at every login. To deploy a change, rebuild (`./build.sh`) and
+re-run `./install-agent.sh` from a checkout; `./uninstall-agent.sh` removes
+both the LaunchAgent and the installed copy.
+
+Only touches `~/Library/Application Support` and `~/Library/LaunchAgents` —
+no `sudo`, no system-wide changes, fully reversible.
 
 ## Privacy & security
 

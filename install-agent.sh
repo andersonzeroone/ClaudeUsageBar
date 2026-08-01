@@ -1,17 +1,31 @@
 #!/usr/bin/env bash
-# Installs a per-user LaunchAgent so ClaudeUsageBar starts automatically at login.
-# Safe/reversible: only touches ~/Library/LaunchAgents, no sudo required.
+# Installs ClaudeUsageBar as a per-user LaunchAgent that starts at login.
+#
+# Copies the built binary to a fixed location outside this repo
+# (~/Library/Application Support/ClaudeUsageBar), so the running app keeps
+# working even if this source checkout is later deleted. Safe/reversible:
+# only touches ~/Library/Application Support and ~/Library/LaunchAgents, no
+# sudo required.
+#
+# Re-run this after every ./build.sh to deploy the latest binary and restart
+# the agent.
 set -euo pipefail
 cd "$(dirname "$0")"
 
-BIN_PATH="$(pwd)/claude-usagebar"
+SRC_BIN="$(pwd)/claude-usagebar"
 LABEL="com.andersonsantos.claudeusagebar"
+INSTALL_DIR="$HOME/Library/Application Support/ClaudeUsageBar"
+INSTALLED_BIN="$INSTALL_DIR/claude-usagebar"
 PLIST="$HOME/Library/LaunchAgents/${LABEL}.plist"
 
-if [ ! -x "$BIN_PATH" ]; then
-  echo "Binary not found at $BIN_PATH — run ./build.sh first." >&2
+if [ ! -x "$SRC_BIN" ]; then
+  echo "Binary not found at $SRC_BIN — run ./build.sh first." >&2
   exit 1
 fi
+
+mkdir -p "$INSTALL_DIR"
+cp -f "$SRC_BIN" "$INSTALLED_BIN"
+chmod +x "$INSTALLED_BIN"
 
 mkdir -p "$HOME/Library/LaunchAgents"
 cat > "$PLIST" <<EOF
@@ -23,7 +37,7 @@ cat > "$PLIST" <<EOF
     <string>${LABEL}</string>
     <key>ProgramArguments</key>
     <array>
-        <string>${BIN_PATH}</string>
+        <string>${INSTALLED_BIN}</string>
     </array>
     <key>RunAtLoad</key>
     <true/>
@@ -39,4 +53,6 @@ EOF
 
 launchctl unload "$PLIST" 2>/dev/null || true
 launchctl load "$PLIST"
-echo "Installed and loaded LaunchAgent: $PLIST"
+echo "Installed to: $INSTALLED_BIN"
+echo "Loaded LaunchAgent: $PLIST"
+echo "This repo checkout can now be deleted. Re-run build.sh + install-agent.sh from a checkout to deploy an update."
