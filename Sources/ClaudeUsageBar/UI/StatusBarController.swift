@@ -57,7 +57,7 @@ final class StatusBarController: NSObject {
             render(
                 icon: MenuBarIcon.warning(),
                 title: " —",
-                content: MenuContent(account: account, error: L10n.errorNoKeychain)
+                content: MenuContent(account: account, error: .noKeychainCredentials)
             )
             return
         }
@@ -74,13 +74,13 @@ final class StatusBarController: NSObject {
             render(
                 icon: MenuBarIcon.warning(),
                 title: " —",
-                content: MenuContent(account: account, credentials: credentials, error: L10n.errorSessionExpired)
+                content: MenuContent(account: account, credentials: credentials, error: .sessionExpired)
             )
         case .failure:
             render(
                 icon: MenuBarIcon.warning(),
                 title: " —",
-                content: MenuContent(account: account, credentials: credentials, error: L10n.errorFetchFailed)
+                content: MenuContent(account: account, credentials: credentials, error: .fetchFailed)
             )
         }
     }

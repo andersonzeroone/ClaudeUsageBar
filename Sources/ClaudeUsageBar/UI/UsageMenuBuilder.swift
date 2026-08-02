@@ -1,5 +1,23 @@
 import AppKit
 
+/// Why the last fetch didn't produce usable usage data — kept unlocalized so
+/// the menu builder can translate it fresh on every render (including a
+/// pure language switch with no new fetch), instead of freezing a message
+/// string in whatever language was active when the error happened.
+enum UsageErrorReason {
+    case noKeychainCredentials
+    case sessionExpired
+    case fetchFailed
+
+    var localizedMessage: String {
+        switch self {
+        case .noKeychainCredentials: return L10n.errorNoKeychain
+        case .sessionExpired: return L10n.errorSessionExpired
+        case .fetchFailed: return L10n.errorFetchFailed
+        }
+    }
+}
+
 /// Everything the dropdown menu needs to render one refresh cycle's worth of
 /// state. A plain value type so `UsageMenuBuilder` stays a pure function of
 /// its input.
@@ -8,7 +26,7 @@ struct MenuContent {
     var account: ClaudeAccount?
     var credentials: OAuthCredentials?
     var usage: UsageResponse?
-    var error: String?
+    var error: UsageErrorReason?
 }
 
 /// Builds the `NSMenu` shown when the status item is clicked. Pure
@@ -31,11 +49,24 @@ enum UsageMenuBuilder {
         /// itself regardless of any color set on it — the only reliable way
         /// to get an exact color (for the secondary/tertiary hierarchy, or
         /// the severity-colored progress bar) is to draw it ourselves.
-        func addLabel(_ attributed: NSAttributedString, height: CGFloat = 20) {
+        ///
+        /// Wraps instead of truncating, and grows the row to fit — long
+        /// error messages or organization names would otherwise get cut off
+        /// with an ellipsis at a fixed single-line height.
+        func addLabel(_ attributed: NSAttributedString, minHeight: CGFloat = 20) {
+            let contentWidth = rowWidth - rowIndent * 2
+            let textHeight = ceil(attributed.boundingRect(
+                with: NSSize(width: contentWidth, height: .greatestFiniteMagnitude),
+                options: [.usesLineFragmentOrigin, .usesFontLeading]
+            ).height)
+
             let label = NSTextField(labelWithAttributedString: attributed)
-            label.lineBreakMode = .byTruncatingTail
-            label.maximumNumberOfLines = 1
-            label.frame = NSRect(x: rowIndent, y: (height - 16) / 2, width: rowWidth - rowIndent * 2, height: 16)
+            label.lineBreakMode = .byWordWrapping
+            label.maximumNumberOfLines = 0
+            label.preferredMaxLayoutWidth = contentWidth
+
+            let height = max(minHeight, textHeight + 6)
+            label.frame = NSRect(x: rowIndent, y: (height - textHeight) / 2, width: contentWidth, height: textHeight)
             let container = NSView(frame: NSRect(x: 0, y: 0, width: rowWidth, height: height))
             container.addSubview(label)
             let item = NSMenuItem(title: "", action: nil, keyEquivalent: "")
@@ -78,7 +109,7 @@ enum UsageMenuBuilder {
                 .font: NSFont.systemFont(ofSize: 13, weight: .semibold),
                 .foregroundColor: NSColor.labelColor,
             ]))
-            addLabel(line, height: 22)
+            addLabel(line, minHeight: 22)
         }
 
         if let account = content.account {
@@ -95,7 +126,7 @@ enum UsageMenuBuilder {
         if content.loading {
             addSecondary(L10n.loadingUsage)
         } else if let error = content.error {
-            addPrimary("⚠️ \(error)")
+            addPrimary("⚠️ \(error.localizedMessage)")
         } else if let usage = content.usage {
             let fivePct = UsageFormatter.percent(usage.fiveHour?.utilization)
             let sevenPct = UsageFormatter.percent(usage.sevenDay?.utilization)
