@@ -6,14 +6,18 @@ enum UsageFetchError: Error {
     case transport
 }
 
-/// Talks to the same (undocumented, but stable) OAuth endpoints the official
-/// `claude` CLI uses to report and refresh usage. Never account-mutating.
+/// Talks to the same (undocumented, but stable) `/api/oauth/usage` endpoint
+/// the official `claude` CLI uses to report usage.
+///
+/// Deliberately does **not** call the OAuth token-refresh endpoint. Refresh
+/// tokens rotate server-side the moment they're used, whether or not the
+/// caller persists the new one — so even a "read-only, in-memory only"
+/// refresh attempt invalidates the refresh token already sitting in the
+/// Keychain, which the real `claude` CLI needs to stay logged in. This app
+/// only ever reads the access token as-is; if it's expired, the UI shows a
+/// "session expired, run `claude`" message instead of trying to fix it.
 enum AnthropicUsageAPI {
     private static let usageURL = URL(string: "https://api.anthropic.com/api/oauth/usage")!
-    private static let tokenURL = URL(string: "https://platform.claude.com/v1/oauth/token")!
-    /// Public Claude Code CLI OAuth client id (PKCE flow, no client secret) —
-    /// not a credential of its own.
-    private static let clientID = "9d1c250a-e61b-44d9-88ed-5944d1962f5e"
     private static let betaHeader = "oauth-2025-04-20"
     static let fallbackUserAgent = "claude-code/2.1.197"
 
@@ -33,29 +37,6 @@ enum AnthropicUsageAPI {
             return .success(try JSONDecoder().decode(UsageResponse.self, from: data))
         } catch {
             return .failure(.transport)
-        }
-    }
-
-    /// Best-effort, in-memory refresh only — the caller decides whether to
-    /// use the rotated token; nothing here ever touches disk or the Keychain.
-    static func refreshAccessToken(refreshToken: String) async -> RefreshResponse? {
-        var request = URLRequest(url: tokenURL)
-        request.httpMethod = "POST"
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.setValue(betaHeader, forHTTPHeaderField: "anthropic-beta")
-        request.setValue("claude-cli/1.0", forHTTPHeaderField: "User-Agent")
-        let body: [String: String] = [
-            "grant_type": "refresh_token",
-            "client_id": clientID,
-            "refresh_token": refreshToken,
-        ]
-        request.httpBody = try? JSONSerialization.data(withJSONObject: body)
-        do {
-            let (data, response) = try await URLSession.shared.data(for: request)
-            guard let http = response as? HTTPURLResponse, http.statusCode == 200 else { return nil }
-            return try JSONDecoder().decode(RefreshResponse.self, from: data)
-        } catch {
-            return nil
         }
     }
 }

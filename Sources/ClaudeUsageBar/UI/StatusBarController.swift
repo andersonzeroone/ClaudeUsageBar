@@ -53,7 +53,7 @@ final class StatusBarController: NSObject {
 
         let account = CredentialsStore.readAccount()
 
-        guard let credentials = await resolveCredentials() else {
+        guard let credentials = CredentialsStore.readOAuthCredentials() else {
             render(
                 icon: MenuBarIcon.warning(),
                 title: " —",
@@ -83,18 +83,6 @@ final class StatusBarController: NSObject {
                 content: MenuContent(account: account, credentials: credentials, error: .fetchFailed)
             )
         }
-    }
-
-    /// Reads the Keychain credentials and, if the access token is expired
-    /// and a refresh token exists, refreshes in memory only (never written
-    /// back — see `AnthropicUsageAPI`).
-    private func resolveCredentials() async -> OAuthCredentials? {
-        guard let credentials = CredentialsStore.readOAuthCredentials() else { return nil }
-        guard credentials.isExpired, !credentials.refreshToken.isEmpty else { return credentials }
-        guard let refreshed = await AnthropicUsageAPI.refreshAccessToken(refreshToken: credentials.refreshToken) else {
-            return credentials
-        }
-        return credentials.refreshed(with: refreshed)
     }
 
     private func render(icon: NSImage?, title: String, content: MenuContent) {
